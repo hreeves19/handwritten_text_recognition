@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CDN -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Hand Written Text Recognition</title>
+</head>
+<body>
+
+<main class="container" id=main>
+    <h1 class="text-center">Handwritten Text Recognition</h1>
+    <hr>
+
+    <!-- This is where the response will go too -->
+    <div id="response"></div>
+
+    
+
+    <!-- This is where the log goes -->
+    <div class="card">
+        <div class="card-body" id="log">
+                
+        </div>
+        <div class="card-footer" id='cardFooter' style="display: none;">
+            <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="trainingFiles" multiple>
+                    <label class="custom-file-label" for="trainingFiles">Choose files for training</label>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- JQuery CDN and Bootstrap CDN -->
+<script src="http://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" integrity="sha384-xrRywqdh3PHs8keKZN+8zzc5TX0GRTLCcmivcbNJWm2rs5C8PRhcEn3czEjhAO9o" crossorigin="anonymous"></script>
+
+<!-- Tensorflow.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+
+<!-- Page level plugin -->
+<script src="index.js"></script>
+
+</body>
+</html>
