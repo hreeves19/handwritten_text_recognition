@@ -89,28 +89,46 @@ $( "#trainingFiles" ).change(function() {
     //get file object
     var file = document.getElementById('trainingFiles').files;
     var flag = 1;
+    createLog("Start parsing files ...");
 
     if(file.length === 3)
     {
+        var pass = 1;
+
         for(var i = 0; i < file.length; i++)
         {
             // Making sure the files are the correct one
-            if (file[i] && checkFileName(file[i].name) !== -1) {
+            if (file[i] && checkFileName(file[i].name) !== -1) 
+            {
+                // Switching the file names
+                switch(file[i].name)
+                {
+                    // Mapping
+                    case fileNames[0]:
+                        buildClasses(file[i]);
+                        break;
 
-                // create reader
-                console.log(file[i]);
-                var reader = new FileReader();
-                reader.readAsText(file[i]);
-                reader.onload = function(e) {
+                    // Test
+                    case fileNames[1]:
+                        buildTestData(file[i]);
+                        break;
 
-                    // browser completed reading file - display it
-                    alert(e.target.result);
+                    // Train
+                    case fileNames[2]:
+                        buildTrainingData(file[i]);
+                        break;
 
-                    // Call functions to parse the data
-                    // Step 1: Mapping
-                    // Step 2: Build training images
-                    // Step 3: Build test images
-                };
+                    default:
+                        createAlert("<strong>Error:</strong> Unknown file name. Please upload the correct files.", "danger");
+                        createLog("Please upload the correct files.");
+                        pass = 0;
+                        break;
+                }
+
+                if(pass === 0)
+                {
+                    break;
+                }
             }
 
             else
@@ -126,6 +144,7 @@ $( "#trainingFiles" ).change(function() {
     else
     {
         flag = 0;
+        createAlert("<strong>Error:</strong> Not enough files. We need three files and they are: " + fileNames, "danger");
         // Add error messages
     }
 
@@ -133,7 +152,6 @@ $( "#trainingFiles" ).change(function() {
     {
         // start parsing files
         createAlert("All files were accepted!", "success");
-        createLog("Start parsing files...");
     }
 });
 
