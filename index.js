@@ -62,7 +62,7 @@ function createModel()
     model.add(tf.layers.flatten());
 
     model.add(tf.layers.dense({
-        units: 10,
+        units: NUM_CLASSES,
         kernelInitializer: 'VarianceScaling',
         activation: 'softmax'
     }));
@@ -76,11 +76,6 @@ function createModel()
         loss: 'categoricalCrossentropy'
     });
     createLog('Compiled');
-}
-
-function startTraining()
-{
-    
 }
 
 // When files are uploaded, this function triggers
@@ -110,12 +105,12 @@ $( "#trainingFiles" ).change(function() {
 
                     // Test
                     case fileNames[1]:
-                        buildTestData(file[i]);
+                        parseTest(file[i]);
                         break;
 
                     // Train
                     case fileNames[2]:
-                        buildTrainingData(file[i]);
+                        parseTrain(file[i]);
                         break;
 
                     default:
@@ -150,8 +145,7 @@ $( "#trainingFiles" ).change(function() {
 
     if(flag)
     {
-        // start parsing files
-        createAlert("All files were accepted!", "success");
+        // Files were accepted
     }
 });
 
@@ -163,6 +157,64 @@ function main()
     console.log(model);
     
     $('#cardFooter').show('cardFooter');
+
+    // Adding button
+    // Appending the a button for testing
+    $("#test").append('<button class="btn btn-primary" id="testButton" disabled>Test Model</button>');
+
+    document.getElementById('testButton').addEventListener('click', async (el,ev) => {
+        const batch = nextTestBatch(1);
+        await predict(batch);
+    });
+}
+
+async function predict(batch) {
+    tf.tidy(() => {
+        const input_value = Array.from(batch.labels.argMax(1).dataSync());
+
+        const div = document.createElement('div');
+        div.className = 'prediction-div';
+
+        const output = model.predict(batch.xs.reshape([-1, 28, 28, 1]));
+
+        const prediction_value = Array.from(output.argMax(1).dataSync());
+        const image = batch.xs.slice([0, 0], [1, batch.xs.shape[1]]);
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'prediction-canvas';
+        draw(image.flatten(), canvas);
+
+        const label = document.createElement('div');
+        label.innerHTML = 'Original Value: ' + input_value;
+        label.innerHTML += '<br>Prediction Value: ' + prediction_value;
+
+        if (prediction_value - input_value == 0) {
+            label.innerHTML += '<br>Value recognized successfully';
+        } else {
+            label.innerHTML += '<br>Recognition failed!'
+        }
+
+        div.appendChild(canvas);
+        div.appendChild(label);
+        document.getElementById('test').appendChild(div);
+    });
+}
+
+function draw(image, canvas) {
+    const [width, height] = [28, 28];
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const imageData = new ImageData(width, height);
+    const data = image.dataSync();
+    for (let i = 0; i < height * width; ++i) {
+      const j = i * 4;
+      imageData.data[j + 0] = data[i] * 255;
+      imageData.data[j + 1] = data[i] * 255;
+      imageData.data[j + 2] = data[i] * 255;
+      imageData.data[j + 3] = 255;
+    }
+    ctx.putImageData(imageData, 0, 0);
 }
 
 main();
