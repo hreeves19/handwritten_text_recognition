@@ -1,8 +1,9 @@
 var classes = [], classLabels = [];
 var number_testing_set, number_training_set;
-var trainCSV = [], trainLabel = [];
-var testCSV = [], testLabel = [];
-const IMAGE_SIZE = 784, NUM_CLASSES = 47;
+var trainCSV = [], trainLabel = [], trainChunk = [], trainingImages, trainingLabel;
+var testCSV = [], testLabel = [], testChunk = [], testingImages, testingLabel;
+const IMAGE_SIZE = 784, NUM_CLASSES = 47, chunkSize = 4700; // 4700 divides evenly in both sets
+let trainIndicies, testIndicies;
 
 function createLogEntry(message) {
     var html = '<p>' + message + '</p>';
@@ -48,10 +49,8 @@ function parseTrain(file)
         var text = e.target.result;
 
         // Building array
-        //text = text.match(/^.{5,}$/gm);
         text = text.match(/^.{5,}$/gm);
-        console.log(text);
-        var combinedArray = [];
+
         // Looping through test images as CSV's
         for (var x = 0; x < text.length; x++) {
             // Splitting the text row, should be lenght 785
@@ -60,20 +59,67 @@ function parseTrain(file)
             row.shift();
 
             // The row doesn't have the class label anymore
-            //trainCSV.push(row);
-            combinedArray = combinedArray.concat(row);
+            trainCSV.push(row);
             trainLabel.push(label);
-            //testCombinedImages.concat(row);
         }
-        console.log(combinedArray);
-        
+
         // Setting constant
         number_training_set = trainCSV.length;
+
+        /*******************************************************************************************************************/
+        var index = 0;
+        trainingImages = new Float32Array(IMAGE_SIZE * number_training_set);
+        
+        for(let i = 0; i < trainCSV.length; i++)
+        {
+            for(let x = 0; x < trainCSV[i].length; x++)
+            {
+                trainingImages[index] = trainCSV[i][x] / 255;
+                index++;
+            }
+        }
+
+        // Check if image is empty
+        for(let i = 0; i < trainingImages.length / IMAGE_SIZE; i++)
+        {
+            if(Math.max.apply(Math, trainingImages.slice(i * IMAGE_SIZE, i * IMAGE_SIZE + IMAGE_SIZE)) === 0)
+            {
+                console.log("Image " + i + " is empty!");
+                //console.log(testingImages.slice(i * IMAGE_SIZE, i * IMAGE_SIZE + IMAGE_SIZE));
+            }
+        }
+
+        // Time to do the labels, we want them in a Uint8Array
+        const labelBuffer = new ArrayBuffer(number_training_set * NUM_CLASSES);
+        trainingLabel = new Uint8Array(labelBuffer);
+        index = 0;
+
+        for(let i = 0; i < trainLabel.length; i++)
+        {
+            let min = i * NUM_CLASSES;
+            let max = min + NUM_CLASSES;
+            let index = min + trainLabel[i];
+
+            // Set this to the Uint8Array
+            trainingLabel[index] = 1;
+
+            // console.log("Training Label: ", trainLabel[i]);
+            // console.log(trainingLabel.slice(min, max));
+        }
+
+        // Creating shuffled indicies for the training set, this will be used
+        // when we select a random dataset element for training
+        trainIndicies = tf.util.createShuffledIndices(number_training_set);
+
+        // Parse training set finishes last always, start training
+        train();
+        /*******************************************************************************************************************/
+
         createLogEntry("Finished parsing " + file.name);
     };
 }
 
-function parseTest(file) {
+async function parseTest(file) {
     createLogEntry("Parsing " + file.name + " ...");
 
     var reader = new FileReader();
@@ -99,27 +145,130 @@ function parseTest(file) {
 
         // Setting constant
         number_testing_set = testCSV.length;
+        
+        //console.log(testCSV);
+
+        /*******************************************************************************************************************/
+        var index = 0;
+        testingImages = new Float32Array(IMAGE_SIZE * number_testing_set);
+        
+        for(let i = 0; i < testCSV.length; i++)
+        {
+            for(let x = 0; x < testCSV[i].length; x++)
+            {
+                testingImages[index] = testCSV[i][x] / 255;
+                index++;
+            }
+        }
+
+        // Check if image is empty
+        for(let i = 0; i < testingImages.length / IMAGE_SIZE; i++)
+        {
+            if(Math.max.apply(Math, testingImages.slice(i * IMAGE_SIZE, i * IMAGE_SIZE + IMAGE_SIZE)) === 0)
+            {
+                console.log("Image " + i + " is empty!");
+                //console.log(testingImages.slice(i * IMAGE_SIZE, i * IMAGE_SIZE + IMAGE_SIZE));
+            }
+        }
+
+        // Time to do the labels, we want them in a Uint8Array
+        const labelBuffer = new ArrayBuffer(number_testing_set * NUM_CLASSES);
+        testingLabel = new Uint8Array(labelBuffer);
+        index = 0;
+
+        for(let i = 0; i < testLabel.length; i++)
+        {
+            let min = i * NUM_CLASSES;
+            let max = min + NUM_CLASSES;
+            let index = min + testLabel[i];
+
+            // Set this to the Uint8Array
+            testingLabel[index] = 1;
+        }
+
+        // Creating shuffled indicies for the training set, this will be used
+        // when we select a random dataset element for training
+        testIndicies = tf.util.createShuffledIndices(number_testing_set);
+        /*******************************************************************************************************************/
+        
         createLogEntry("Finished parsing " + file.name);
     };
 }
 
 const BATCH_SIZE = 100;
-var position = 0;
+let trainPosition = 0;
+
+function nextTrainBatch()
+{
+    // Defining array for the images and classes
+    const batchImagesArray = new Float32Array(BATCH_SIZE * IMAGE_SIZE);
+    const batchLabelsArray = new Uint8Array(BATCH_SIZE * NUM_CLASSES);
+
+    for(let i = 0; i < BATCH_SIZE; i++)
+    {
+        const image = trainingImages.slice(trainPosition * IMAGE_SIZE, trainPosition * IMAGE_SIZE + IMAGE_SIZE);
+        const label = trainingLabel.slice(trainPosition * NUM_CLASSES, trainPosition * NUM_CLASSES + NUM_CLASSES);
+
+        // Setting arrays to values
+        batchImagesArray.set(image, i * IMAGE_SIZE);
+        batchLabelsArray.set(label, i * NUM_CLASSES);
+        trainPosition++;
+    }
+
+    //console.log(batchImagesArray);
+    //console.log(batchLabelsArray);
+
+    const xs = tf.tensor2d(batchImagesArray, [BATCH_SIZE, IMAGE_SIZE]);
+    const labels = tf.tensor2d(batchLabelsArray, [BATCH_SIZE, NUM_CLASSES]);
+
+    return {xs, labels};
+}
+
+function nextTestBatch()
+{
+    let choice = Math.floor(Math.random() * testCSV.length);
+
+    // Defining array for the images and classes
+    const batchImagesArray = new Float32Array(1 * IMAGE_SIZE);
+    const batchLabelsArray = new Uint8Array(1 * NUM_CLASSES);
+
+    for(let i = 0; i < 1; i++)
+    {
+        const image = testingImages.slice(choice * IMAGE_SIZE, choice * IMAGE_SIZE + IMAGE_SIZE);
+        const label = testingLabel.slice(choice * NUM_CLASSES, choice * NUM_CLASSES + NUM_CLASSES);
+
+        // Setting arrays to values
+        batchImagesArray.set(image, i * IMAGE_SIZE);
+        batchLabelsArray.set(label, i * NUM_CLASSES);
+    }
+
+    console.log(batchImagesArray);
+    console.log(batchLabelsArray);
+
+    const xs = tf.tensor2d(batchImagesArray, [1, IMAGE_SIZE]);
+    const labels = tf.tensor2d(batchLabelsArray, [1, NUM_CLASSES]);
+
+    return {xs, labels};
+}
 
 async function train() {
     createLogEntry("Starting to train the model ...");
 
-    // Looping through the training TRAIN_BATCHES of times
-    for (let i = 0; i < number_training_set / BATCH_SIZE; i++) {
-        console.log("Training ", i);
+    // Train on entire dataset
+    for(let i = 0; i < number_training_set / BATCH_SIZE; i++)
+    {
+        console.log("Train: ", i);
+        // Getting the batch
         const batch = tf.tidy(() => {
-            const batch = nextTrainBatch(BATCH_SIZE);
+            const batch = nextTrainBatch();
             batch.xs = batch.xs.reshape([BATCH_SIZE, 28, 28, 1]);
             return batch;
         });
 
+        console.log(batch);
+
         await model.fit(
-            batch.xs, batch.labels, { batchSize: BATCH_SIZE, epochs: 1 }
+            batch.xs, batch.labels, {batchSize: BATCH_SIZE, epochs: 1}
         );
 
         tf.dispose(batch);
@@ -131,4 +280,15 @@ async function train() {
 
     // Undisabling button
     document.getElementById('testButton').disabled = false;
+}
+
+function Flaot32Concat(first, second)
+{
+    var firstLength = first.length,
+        result = new Float32Array(firstLength + second.length);
+
+    result.set(first);
+    result.set(second, firstLength);
+
+    return result;
 }

@@ -163,13 +163,14 @@ function main()
     $("#test").append('<button class="btn btn-primary" id="testButton" disabled>Test Model</button>');
 
     document.getElementById('testButton').addEventListener('click', async (el,ev) => {
-        const batch = nextTestBatch(1);
+        const batch = nextTestBatch();
         await predict(batch);
     });
 }
 
 async function predict(batch) {
     tf.tidy(() => {
+        console.log(batch);
         const input_value = Array.from(batch.labels.argMax(1).dataSync());
 
         const div = document.createElement('div');
@@ -179,6 +180,7 @@ async function predict(batch) {
 
         const prediction_value = Array.from(output.argMax(1).dataSync());
         const image = batch.xs.slice([0, 0], [1, batch.xs.shape[1]]);
+        console.log(image);
 
         const canvas = document.createElement('canvas');
         canvas.className = 'prediction-canvas';
