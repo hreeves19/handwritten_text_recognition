@@ -242,9 +242,6 @@ function nextTestBatch()
         batchLabelsArray.set(label, i * NUM_CLASSES);
     }
 
-    console.log(batchImagesArray);
-    console.log(batchLabelsArray);
-
     const xs = tf.tensor2d(batchImagesArray, [1, IMAGE_SIZE]);
     const labels = tf.tensor2d(batchLabelsArray, [1, NUM_CLASSES]);
 

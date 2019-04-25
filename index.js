@@ -1,4 +1,6 @@
 var model;
+var success = 0;
+var total = 0;
 const fileNames = ["emnist-balanced-mapping.txt", "emnist-balanced-test.csv", "emnist-balanced-train.csv"];
 
 function checkFileName(fileName)
@@ -163,6 +165,17 @@ function main()
     $("#test").append('<button class="btn btn-primary" id="testButton" disabled>Test Model</button>');
 
     document.getElementById('testButton').addEventListener('click', async (el,ev) => {
+        /*for(var i = 0; i < 15000; i++)
+        {
+            const batch = nextTestBatch();
+            await predict(batch);
+        }
+
+        console.log("Number of images tested with: ", total);
+        console.log("Number of test predicted successfully: ", success);
+        console.log("Accuracy: " + ((success / total) * 100) + "%");
+        total = 0;
+        success = 0;*/
         const batch = nextTestBatch();
         await predict(batch);
     });
@@ -199,6 +212,11 @@ async function predict(batch) {
         div.appendChild(canvas);
         div.appendChild(label);
         document.getElementById('test').appendChild(div);
+        total++;
+
+        if(prediction_value - input_value == 0) {
+            success++;
+        }
     });
 }
 
@@ -209,7 +227,7 @@ function draw(image, canvas) {
     const ctx = canvas.getContext('2d');
     const imageData = new ImageData(width, height);
     const data = image.dataSync();
-    for (let i = 0; i < height * width; ++i) {
+    for (let i = 0; i < height * width; i++) {
       const j = i * 4;
       imageData.data[j + 0] = data[i] * 255;
       imageData.data[j + 1] = data[i] * 255;
